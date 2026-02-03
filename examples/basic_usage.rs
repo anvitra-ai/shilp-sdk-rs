@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
     // Initialize the client
     let client = Client::new("http://localhost:3000");
 
@@ -26,8 +27,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         name: "my-collection".to_string(),
         no_reference_storage: None,
         has_metadata_storage: None,
-        storage_type: None,
-        reference_storage_type: None,
+        storage_type: Some(shilp_sdk::models::StorageBackendType::File),
+        reference_storage_type: Some(shilp_sdk::models::StorageBackendType::File),
         enable_pq: None,
     };
     let add_result = client.add_collection(&req).await?;
@@ -36,7 +37,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Insert a record
     let mut record = HashMap::new();
     record.insert("title".to_string(), serde_json::json!("Hello World"));
-    record.insert("vector".to_string(), serde_json::json!([0.1, 0.2, 0.3]));
 
     let insert_req = InsertRecordRequest {
         collection: "my-collection".to_string(),

@@ -64,8 +64,14 @@ impl Client {
             return Err(ShilpError::ApiError { message, status });
         }
 
-        let result = response.json::<T>().await?;
+        // Deserialize the response body to a json map
+        let response_text = response.text().await?;
+        log::debug!("Response Text: {}", response_text);
+        let result = serde_json::from_str::<T>(&response_text)?;
         Ok(result)
+
+        // let result = response.json::<T>().await?;
+        // Ok(result)
     }
 
     /// Performs a file upload request
@@ -86,8 +92,10 @@ impl Client {
         let stream = tokio_util::codec::FramedRead::new(file, tokio_util::codec::BytesCodec::new());
         let file_body = reqwest::Body::wrap_stream(stream);
 
-        let form = reqwest::multipart::Form::new()
-            .part("file", reqwest::multipart::Part::stream(file_body).file_name(file_name.to_string()));
+        let form = reqwest::multipart::Form::new().part(
+            "file",
+            reqwest::multipart::Part::stream(file_body).file_name(file_name.to_string()),
+        );
 
         let response = self
             .http_client

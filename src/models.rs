@@ -9,21 +9,45 @@ pub struct GenericResponse {
 }
 
 // Storage backend types
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum StorageBackendType {
-    #[serde(rename = "-1")]
     DoesNotExist = -1,
-    #[serde(rename = "0")]
     File = 0,
-    #[serde(rename = "1")]
     S3 = 1,
+}
+
+impl<'de> Deserialize<'de> for StorageBackendType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = i32::deserialize(deserializer)?;
+        match value {
+            -1 => Ok(StorageBackendType::DoesNotExist),
+            1 => Ok(StorageBackendType::File),
+            2 => Ok(StorageBackendType::S3),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid storage backend type: {}",
+                value
+            ))),
+        }
+    }
+}
+
+impl Serialize for StorageBackendType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i32(*self as i32)
+    }
 }
 
 impl StorageBackendType {
     pub fn as_str(&self) -> &'static str {
         match self {
-            StorageBackendType::File => "filesystem",
+            StorageBackendType::File => "disk",
             StorageBackendType::S3 => "s3",
             StorageBackendType::DoesNotExist => "unknown",
         }
@@ -72,15 +96,16 @@ pub struct MetadataColumnSchema {
 pub struct Collection {
     pub name: String,
     pub is_loaded: bool,
-    pub fields: Vec<String>,
-    pub searchable_fields: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fields: Option<Vec<String>>,
+    pub searchable_fields: Option<Vec<String>>,
+    #[serde(default)]
     pub metadata: Option<Vec<MetadataColumnSchema>>,
     pub has_metadata_enabled: bool,
     pub no_reference_storage: bool,
     pub storage_type: StorageBackendType,
     pub reference_storage_type: StorageBackendType,
-    pub is_pq_enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_pq_enabled: Option<bool>,
 }
 
 // Metadata support info
@@ -122,7 +147,7 @@ pub struct AddCollectionRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecordData {
     pub id: String,
-    pub expiry: i64,
+    pub expiry: Option<i64>,
     pub fields: HashMap<String, serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keyword_fields: Option<HashMap<String, bool>>,
@@ -359,7 +384,7 @@ pub struct SearchRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResponse {
     pub success: bool,
-    pub message: String,
+    pub message: Option<String>,
     pub data: Vec<HashMap<String, serde_json::Value>>,
 }
 
