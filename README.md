@@ -1,5 +1,7 @@
 # Shilp Rust SDK
 
+[![Crates.io](https://img.shields.io/crates/v/shilp-sdk.svg)](https://crates.io/crates/shilp-sdk)
+
 This is the official Rust SDK for the Shilp Vector Database API.
 
 ## Installation
@@ -8,7 +10,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-shilp-sdk = "0.1"
+shilp-sdk = "0.12"
 tokio = { version = "1", features = ["full"] }
 ```
 
