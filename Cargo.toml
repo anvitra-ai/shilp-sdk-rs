@@ -1,0 +1,23 @@
+[package]
+name = "shilp-sdk"
+version = "0.12.0"
+edition = "2021"
+authors = ["Anvitra AI"]
+description = "Rust SDK for the Shilp Vector Database API"
+license = "MIT"
+repository = "https://github.com/anvitra-ai/shilp-sdk-rs"
+keywords = ["vector-database", "shilp", "sdk", "api-client"]
+categories = ["api-bindings"]
+
+[dependencies]
+reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+thiserror = "1.0"
+log = "0.4"
+
+[dev-dependencies]
+tokio-test = "0.4"
+env_logger = "0.11"
