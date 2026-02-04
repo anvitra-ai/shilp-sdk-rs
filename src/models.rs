@@ -293,24 +293,16 @@ pub struct FileReaderOptions {
 }
 
 // Filter operations
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum FilterOp {
-    #[serde(rename = "0")]
     Equals = 0,
-    #[serde(rename = "1")]
     NotEquals = 1,
-    #[serde(rename = "2")]
     GreaterThan = 2,
-    #[serde(rename = "3")]
     GreaterThanOrEqual = 3,
-    #[serde(rename = "4")]
     LessThan = 4,
-    #[serde(rename = "5")]
     LessThanOrEqual = 5,
-    #[serde(rename = "6")]
     In = 6,
-    #[serde(rename = "7")]
     NotIn = 7,
 }
 
@@ -326,6 +318,38 @@ impl FilterOp {
             FilterOp::In => "IN",
             FilterOp::NotIn => "NOT IN",
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for FilterOp {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = i32::deserialize(deserializer)?;
+        match value {
+            0 => Ok(FilterOp::Equals),
+            1 => Ok(FilterOp::NotEquals),
+            2 => Ok(FilterOp::GreaterThan),
+            3 => Ok(FilterOp::GreaterThanOrEqual),
+            4 => Ok(FilterOp::LessThan),
+            5 => Ok(FilterOp::LessThanOrEqual),
+            6 => Ok(FilterOp::In),
+            7 => Ok(FilterOp::NotIn),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid attribute type: {}",
+                value
+            ))),
+        }
+    }
+}
+
+impl Serialize for FilterOp {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i32(*self as i32)
     }
 }
 
@@ -350,12 +374,10 @@ pub struct CompoundFilter {
 }
 
 // Sort order
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum SortOrder {
-    #[serde(rename = "0")]
     Ascending = 0,
-    #[serde(rename = "1")]
     Descending = 1,
 }
 
@@ -365,6 +387,32 @@ impl SortOrder {
             SortOrder::Ascending => "ASC",
             SortOrder::Descending => "DESC",
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for SortOrder {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = i32::deserialize(deserializer)?;
+        match value {
+            0 => Ok(SortOrder::Ascending),
+            1 => Ok(SortOrder::Descending),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid sort order: {}",
+                value
+            ))),
+        }
+    }
+}
+
+impl Serialize for SortOrder {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i32(*self as i32)
     }
 }
 
