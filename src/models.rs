@@ -59,16 +59,12 @@ impl StorageBackendType {
 }
 
 // Attribute types
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum AttrType {
-    #[serde(rename = "0")]
     Int64 = 0,
-    #[serde(rename = "1")]
     Float64 = 1,
-    #[serde(rename = "2")]
     String = 2,
-    #[serde(rename = "3")]
     Bool = 3,
 }
 
@@ -80,6 +76,34 @@ impl AttrType {
             AttrType::String => "string",
             AttrType::Bool => "bool",
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for AttrType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = i32::deserialize(deserializer)?;
+        match value {
+            0 => Ok(AttrType::Int64),
+            1 => Ok(AttrType::Float64),
+            2 => Ok(AttrType::String),
+            3 => Ok(AttrType::Bool),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid attribute type: {}",
+                value
+            ))),
+        }
+    }
+}
+
+impl Serialize for AttrType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i32(*self as i32)
     }
 }
 
