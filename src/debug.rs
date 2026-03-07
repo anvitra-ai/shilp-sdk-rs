@@ -15,6 +15,7 @@ impl Client {
         field: &str,
         node_id: i32,
         text: &str,
+        custom_matcher_text: Option<&str>,
     ) -> Result<DebugDistanceResponse> {
         let path = format!(
             "/api/collections/v1/debug/{}/{}/distance/{}",
@@ -22,6 +23,12 @@ impl Client {
         );
         let mut params = HashMap::new();
         params.insert("text".to_string(), text.to_string());
+
+        if let Some(custom_text) = custom_matcher_text {
+            if !custom_text.is_empty() {
+                params.insert("custom_matcher_text".to_string(), custom_text.to_string());
+            }
+        }
 
         self.do_request::<DebugDistanceResponse, ()>(
             reqwest::Method::GET,

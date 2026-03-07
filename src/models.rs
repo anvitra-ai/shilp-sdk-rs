@@ -795,6 +795,7 @@ pub struct DebugGetEmbeddingsRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DebugDistanceData {
     pub distance: f64,
+    pub custom_matcher_distance: Option<f64>,
     pub vector: Vec<f64>,
 }
 
