@@ -777,6 +777,20 @@ pub struct HealthResponse {
     pub version: String,
 }
 
+// Debug get embeddings response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DebugGetEmbeddingsResponse {
+    pub success: bool,
+    pub message: String,
+    pub data: Vec<Vec<f32>>,
+}
+
+// Debug get embeddings request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DebugGetEmbeddingsRequest {
+    pub texts: Vec<String>,
+}
+
 // Debug distance data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DebugDistanceData {

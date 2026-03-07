@@ -1,7 +1,8 @@
 use crate::client::Client;
 use crate::error::Result;
 use crate::models::{
-    DebugDistanceResponse, DebugLevelsResponse, DebugNodeInfoResponse, DebugNodesAtLevelResponse,
+    DebugDistanceResponse, DebugGetEmbeddingsRequest, DebugGetEmbeddingsResponse,
+    DebugLevelsResponse, DebugNodeInfoResponse, DebugNodesAtLevelResponse,
     DebugReferenceNodeResponse,
 };
 use std::collections::HashMap;
@@ -118,5 +119,22 @@ impl Client {
         );
         self.do_request::<DebugReferenceNodeResponse, ()>(reqwest::Method::GET, &path, None, None)
             .await
+    }
+
+    /// Gets embeddings for a collection for debug purposes
+    pub async fn get_collection_embeddings(
+        &self,
+        collection_name: &str,
+        req: DebugGetEmbeddingsRequest,
+    ) -> Result<DebugGetEmbeddingsResponse> {
+        let path = format!("/api/collections/v1/debug/{}/embedding", collection_name);
+
+        self.do_request::<DebugGetEmbeddingsResponse, DebugGetEmbeddingsRequest>(
+            reqwest::Method::POST,
+            &path,
+            Some(&req),
+            None,
+        )
+        .await
     }
 }

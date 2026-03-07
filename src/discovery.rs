@@ -184,7 +184,10 @@ impl DiscoveryClient {
         Ok(())
     }
 
-    async fn register_shilp(&self, payload: &RegisterToDiscoveryRequest) -> Result<GenericResponse> {
+    async fn register_shilp(
+        &self,
+        payload: &RegisterToDiscoveryRequest,
+    ) -> Result<GenericResponse> {
         self.do_request(
             reqwest::Method::POST,
             "/control/shilp/register",

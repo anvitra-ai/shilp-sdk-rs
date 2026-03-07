@@ -1,9 +1,8 @@
 use crate::client::Client;
 use crate::error::Result;
 use crate::models::{
-    AddCollectionRequest, GenericResponse, GetCollectionDataResponse,
-    GetCollectionSchemaResponse, InsertRecordRequest, InsertRecordResponse,
-    ListCollectionsResponse,
+    AddCollectionRequest, GenericResponse, GetCollectionDataResponse, GetCollectionSchemaResponse,
+    InsertRecordRequest, InsertRecordResponse, ListCollectionsResponse,
 };
 use reqwest::Response;
 use std::collections::HashMap;
@@ -32,11 +31,7 @@ impl Client {
     }
 
     /// Deletes a record from a collection
-    pub async fn delete_record(
-        &self,
-        collection_name: &str,
-        id: &str,
-    ) -> Result<GenericResponse> {
+    pub async fn delete_record(&self, collection_name: &str, id: &str) -> Result<GenericResponse> {
         let path = format!("/api/collections/v1/{}/{}", collection_name, id);
         self.do_request::<GenericResponse, ()>(reqwest::Method::DELETE, &path, None, None)
             .await
@@ -165,12 +160,7 @@ impl Client {
         collection_name: &str,
     ) -> Result<GetCollectionSchemaResponse> {
         let path = format!("/api/collections/v1/{}/schema", collection_name);
-        self.do_request::<GetCollectionSchemaResponse, ()>(
-            reqwest::Method::GET,
-            &path,
-            None,
-            None,
-        )
-        .await
+        self.do_request::<GetCollectionSchemaResponse, ()>(reqwest::Method::GET, &path, None, None)
+            .await
     }
 }
