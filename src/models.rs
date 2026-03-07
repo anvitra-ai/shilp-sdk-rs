@@ -8,6 +8,18 @@ pub struct GenericResponse {
     pub message: String,
 }
 
+// Index type for a column
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum IndexType {
+    #[serde(rename = "hnsw")]
+    Hnsw,
+    #[serde(rename = "inverted")]
+    Inverted,
+    #[serde(rename = "metadata")]
+    Metadata,
+}
+
 // Storage backend types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
@@ -66,6 +78,7 @@ pub enum AttrType {
     Float64 = 1,
     String = 2,
     Bool = 3,
+    Currency = 4,
 }
 
 impl AttrType {
@@ -75,6 +88,7 @@ impl AttrType {
             AttrType::Float64 => "float64",
             AttrType::String => "string",
             AttrType::Bool => "bool",
+            AttrType::Currency => "currency",
         }
     }
 }
@@ -90,11 +104,55 @@ impl<'de> Deserialize<'de> for AttrType {
             1 => Ok(AttrType::Float64),
             2 => Ok(AttrType::String),
             3 => Ok(AttrType::Bool),
+            4 => Ok(AttrType::Currency),
             _ => Err(serde::de::Error::custom(format!(
                 "Invalid attribute type: {}",
                 value
             ))),
         }
+    }
+}
+
+// Attribute type for schema attributes
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(i32)]
+pub enum AttributeType {
+    Numerical = 1,
+    String = 2,
+}
+
+impl AttributeType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            AttributeType::Numerical => "numerical",
+            AttributeType::String => "string",
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for AttributeType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = i32::deserialize(deserializer)?;
+        match value {
+            1 => Ok(AttributeType::Numerical),
+            2 => Ok(AttributeType::String),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid attribute type: {}",
+                value
+            ))),
+        }
+    }
+}
+
+impl Serialize for AttributeType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i32(*self as i32)
     }
 }
 
@@ -122,6 +180,8 @@ pub struct Collection {
     pub is_loaded: bool,
     pub fields: Option<Vec<String>>,
     pub searchable_fields: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_config: Option<HashMap<String, IndexType>>,
     #[serde(default)]
     pub metadata: Option<Vec<MetadataColumnSchema>>,
     pub has_metadata_enabled: bool,
@@ -130,6 +190,10 @@ pub struct Collection {
     pub reference_storage_type: StorageBackendType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_pq_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_nli_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nli_domain: Option<String>,
 }
 
 // Metadata support info
@@ -149,6 +213,8 @@ pub struct ListCollectionsResponse {
     pub message: String,
     pub data: Vec<Collection>,
     pub metadata_info: Vec<MetadataSupportInfo>,
+    #[serde(default)]
+    pub is_nli_supported: bool,
 }
 
 // Add collection request
@@ -165,6 +231,85 @@ pub struct AddCollectionRequest {
     pub reference_storage_type: Option<StorageBackendType>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_pq: Option<bool>,
+}
+
+// Get collection data response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetCollectionDataResponse {
+    pub success: bool,
+    pub message: String,
+    pub data: Vec<CollectionDataRecord>,
+    pub total: i32,
+}
+
+// Collection data record
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CollectionDataRecord {
+    pub id: String,
+    pub data: HashMap<String, serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vectors: Option<HashMap<String, Vec<f32>>>,
+}
+
+// Get collection schema response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetCollectionSchemaResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<CollectionSchema>,
+}
+
+// Collection schema
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CollectionSchema {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attributes: Option<Vec<Attribute>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value_schema: Option<Vec<CategorySchema>>,
+}
+
+// Attribute in a collection schema
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Attribute {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub attr_type: Option<AttributeType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub index_type: Option<IndexType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_metadata: Option<bool>,
+}
+
+// Category schema for inverted-index fields
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategorySchema {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub index_type: Option<IndexType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub values: Option<Vec<CategoryValue>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub synonyms: Option<Vec<String>>,
+}
+
+// Category value
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CategoryValue {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub count: Option<i32>,
+}
+
+// Vector create config
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct VectorCreateConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ef_construction: Option<i32>,
 }
 
 // Record data
@@ -200,6 +345,10 @@ pub struct InsertRecordRequest {
     pub vectors: Option<HashMap<String, Vec<f32>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vector_config: Option<HashMap<String, VectorCreateConfig>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub array_fields: Option<Vec<String>>,
 }
 
 // Insert record response
@@ -250,6 +399,8 @@ pub struct IngestRequest {
     pub metadata_fields: Option<HashMap<String, AttrType>>,
     pub fields: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub array_fields: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id_field: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expiry_field: Option<String>,
@@ -259,6 +410,8 @@ pub struct IngestRequest {
     pub embedding_model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ingestion_batch_size: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vector_config: Option<HashMap<String, VectorCreateConfig>>,
 }
 
 // Ingest response
@@ -279,6 +432,27 @@ pub struct ListIngestionSourcesResponse {
     pub data: Option<Vec<IngestSourceType>>,
 }
 
+// Vertical info for NLI
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerticalInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_native: Option<bool>,
+}
+
+// List NLI verticals response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListNLIVerticalsResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Vec<VerticalInfo>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
 // File reader options
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FileReaderOptions {
@@ -296,6 +470,7 @@ pub struct FileReaderOptions {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
 pub enum FilterOp {
+    Unknown = -1,
     Equals = 0,
     NotEquals = 1,
     GreaterThan = 2,
@@ -309,6 +484,7 @@ pub enum FilterOp {
 impl FilterOp {
     pub fn as_str(&self) -> &'static str {
         match self {
+            FilterOp::Unknown => "unknown",
             FilterOp::Equals => "=",
             FilterOp::NotEquals => "!=",
             FilterOp::GreaterThan => ">",
@@ -328,6 +504,7 @@ impl<'de> Deserialize<'de> for FilterOp {
     {
         let value = i32::deserialize(deserializer)?;
         match value {
+            -1 => Ok(FilterOp::Unknown),
             0 => Ok(FilterOp::Equals),
             1 => Ok(FilterOp::NotEquals),
             2 => Ok(FilterOp::GreaterThan),
@@ -364,6 +541,8 @@ pub struct FilterExpression {
     pub value: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub values: Option<Vec<serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filters: Option<Box<CompoundFilter>>,
 }
 
 // Compound filter
@@ -371,6 +550,8 @@ pub struct FilterExpression {
 pub struct CompoundFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub and: Option<Vec<FilterExpression>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub or: Option<Vec<FilterExpression>>,
 }
 
 // Sort order
@@ -430,6 +611,13 @@ pub struct CompoundSort {
     pub sorts: Option<Vec<SortExpression>>,
 }
 
+// Vector search config
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct VectorSearchConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ef_search: Option<i32>,
+}
+
 // Search request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchRequest {
@@ -450,6 +638,14 @@ pub struct SearchRequest {
     pub sort: Option<CompoundSort>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vector_query: Option<Vec<f32>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub use_nli: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_config: Option<HashMap<String, VectorSearchConfig>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub queries: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vector_queries: Option<HashMap<String, Vec<f32>>>,
 }
 
 // Search response
@@ -458,6 +654,90 @@ pub struct SearchResponse {
     pub success: bool,
     pub message: Option<String>,
     pub data: Vec<HashMap<String, serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interpretation: Option<Query>,
+}
+
+// Query interpretation from NLI
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Query {
+    pub vector_query: VectorQueryInterpretation,
+    pub filters: Vec<NliFilter>,
+    pub value_filters: Vec<NliValueFilter>,
+}
+
+// Vector query interpretation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VectorQueryInterpretation {
+    pub resolved_by: Vec<String>,
+    pub vector_query: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vector_queries: Option<HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vector_confidences: Option<HashMap<String, f32>>,
+}
+
+// Filter operator string for NLI
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum FilterOperator {
+    #[serde(rename = "EQ")]
+    Equals,
+    #[serde(rename = "NEQ")]
+    NotEquals,
+    #[serde(rename = "GT")]
+    GreaterThan,
+    #[serde(rename = "LT")]
+    LessThan,
+    #[serde(rename = "GTE")]
+    GreaterEqual,
+    #[serde(rename = "LTE")]
+    LessEqual,
+    #[serde(rename = "IN")]
+    In,
+    #[serde(rename = "NOT IN")]
+    NotIn,
+}
+
+// Token in an NLI query
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Token {
+    pub text: String,
+    pub tag: String,
+    pub label: String,
+}
+
+// Numerical value in an NLI filter
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NumericalValue {
+    pub unit: String,
+    pub base_value: f64,
+    pub multiplier: f64,
+    pub total_value: f64,
+    pub original_text: String,
+}
+
+// NLI filter expression
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NliFilter {
+    pub resolved_by: Vec<String>,
+    pub attribute: Vec<Token>,
+    pub operation: Token,
+    pub operator: FilterOperator,
+    pub value: Vec<Token>,
+    pub is_numerical: bool,
+    pub grounded: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub numerical_value: Option<NumericalValue>,
+}
+
+// NLI value filter
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NliValueFilter {
+    pub resolved_by: Vec<String>,
+    pub attribute: Vec<Token>,
+    pub values: Vec<Vec<Token>>,
+    pub grounded: bool,
+    pub operator: FilterOperator,
 }
 
 // Storage item

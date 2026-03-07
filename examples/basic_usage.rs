@@ -49,6 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         keyword_fields: None,
         vectors: None,
         model: None,
+        vector_config: None,
+        array_fields: None,
     };
     let insert_result = client.insert_record(&insert_req).await?;
     println!("Record inserted: {}", insert_result.success);
@@ -68,6 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         filters: None,
         sort: None,
         vector_query: None,
+        use_nli: None,
+        field_config: None,
+        queries: None,
+        vector_queries: None,
     };
     let results = client.search_data(&search_req).await?;
     println!("Search results: {:?}", results.data);
@@ -84,6 +90,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         filters: None,
         sort: None,
         vector_query: None,
+        use_nli: None,
+        field_config: None,
+        queries: None,
+        vector_queries: None,
     };
     let advanced_results = client.search_data(&advanced_search_req).await?;
     println!("Advanced search results: {:?}", advanced_results.data);
