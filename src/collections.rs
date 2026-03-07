@@ -1,10 +1,12 @@
 use crate::client::Client;
 use crate::error::Result;
 use crate::models::{
-    AddCollectionRequest, GenericResponse, InsertRecordRequest, InsertRecordResponse,
+    AddCollectionRequest, GenericResponse, GetCollectionDataResponse,
+    GetCollectionSchemaResponse, InsertRecordRequest, InsertRecordResponse,
     ListCollectionsResponse,
 };
 use reqwest::Response;
+use std::collections::HashMap;
 
 impl Client {
     /// Lists all collections
@@ -124,6 +126,49 @@ impl Client {
             reqwest::Method::POST,
             "/api/collections/v1/record",
             Some(req),
+            None,
+        )
+        .await
+    }
+
+    /// Gets paginated data records from a collection
+    pub async fn get_collection_data(
+        &self,
+        collection_name: &str,
+        offset: i32,
+        limit: i32,
+    ) -> Result<GetCollectionDataResponse> {
+        let path = format!(
+            "/api/collections/v1/{}/data?offset={}&limit={}",
+            collection_name, offset, limit
+        );
+        self.do_request::<GetCollectionDataResponse, ()>(reqwest::Method::GET, &path, None, None)
+            .await
+    }
+
+    /// Enables Natural Language Inference for a collection and vertical.
+    /// This is an SSE endpoint that streams the progress of enabling NLI.
+    /// The `vertical` parameter specifies the NLI provider vertical; pass an empty string
+    /// for a custom vertical.
+    /// Returns the raw streaming response; the caller is responsible for reading the SSE events.
+    pub async fn enable_nli(&self, collection: &str, vertical: &str) -> Result<Response> {
+        let mut params = HashMap::new();
+        params.insert("vertical".to_string(), vertical.to_string());
+        let path = format!("/api/collections/v1/{}/nli/enable", collection);
+        self.do_request_with_file_response(reqwest::Method::GET, &path, Some(&params))
+            .await
+    }
+
+    /// Gets the schema for a collection
+    pub async fn get_collection_schema(
+        &self,
+        collection_name: &str,
+    ) -> Result<GetCollectionSchemaResponse> {
+        let path = format!("/api/collections/v1/{}/schema", collection_name);
+        self.do_request::<GetCollectionSchemaResponse, ()>(
+            reqwest::Method::GET,
+            &path,
+            None,
             None,
         )
         .await

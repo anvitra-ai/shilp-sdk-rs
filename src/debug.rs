@@ -1,8 +1,8 @@
 use crate::client::Client;
 use crate::error::Result;
 use crate::models::{
-    DebugDistanceResponse, DebugLevelsResponse, DebugNodeInfoResponse,
-    DebugNodesAtLevelResponse, DebugReferenceNodeResponse,
+    DebugDistanceResponse, DebugLevelsResponse, DebugNodeInfoResponse, DebugNodesAtLevelResponse,
+    DebugReferenceNodeResponse,
 };
 use std::collections::HashMap;
 
@@ -110,7 +110,7 @@ impl Client {
     pub async fn get_collection_node_by_reference_node_id(
         &self,
         collection_name: &str,
-        node_id: i32,
+        node_id: &str,
     ) -> Result<DebugReferenceNodeResponse> {
         let path = format!(
             "/api/collections/v1/debug/{}/nodes/reference_node/{}",

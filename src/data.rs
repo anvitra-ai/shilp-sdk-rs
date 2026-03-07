@@ -2,8 +2,8 @@ use crate::client::Client;
 use crate::error::{Result, ShilpError};
 use crate::models::{
     FileReaderOptions, IngestRequest, IngestResponse, IngestSourceType,
-    ListEmbeddingModelsResponse, ListIngestionSourcesResponse, ListStorageResponse,
-    ReadDocumentResponse, SearchRequest, SearchResponse,
+    ListEmbeddingModelsResponse, ListIngestionSourcesResponse, ListNLIVerticalsResponse,
+    ListStorageResponse, ReadDocumentResponse, SearchRequest, SearchResponse,
 };
 use std::collections::HashMap;
 
@@ -164,6 +164,17 @@ impl Client {
         self.do_request::<ListEmbeddingModelsResponse, ()>(
             reqwest::Method::GET,
             "/api/data/v1/embedding/models",
+            None,
+            None,
+        )
+        .await
+    }
+
+    /// Lists all available NLI verticals
+    pub async fn list_nli_verticals(&self) -> Result<ListNLIVerticalsResponse> {
+        self.do_request::<ListNLIVerticalsResponse, ()>(
+            reqwest::Method::GET,
+            "/api/data/v1/nli/verticals",
             None,
             None,
         )
