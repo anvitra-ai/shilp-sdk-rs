@@ -1,8 +1,8 @@
 use crate::client::Client;
 use crate::error::Result;
 use crate::models::{
-    AddCollectionRequest, GenericResponse, GetCollectionDataResponse, GetCollectionSchemaResponse,
-    EnableMetadataStoreRequest, EnableMetadataStoreResponse, InsertRecordRequest,
+    AddCollectionRequest, EnableMetadataStoreRequest, EnableMetadataStoreResponse, GenericResponse,
+    GetCollectionDataResponse, GetCollectionSchemaResponse, InsertRecordRequest,
     InsertRecordResponse, ListCollectionsResponse,
 };
 use reqwest::Response;

@@ -32,15 +32,6 @@ impl Client {
                 "both vector_query and query cannot be empty".to_string(),
             ));
         }
-        if let Some(ref fuzzy_algo) = req.fuzzy_algo {
-            if !fuzzy_algo.is_valid() {
-                return Err(ShilpError::ValidationError(format!(
-                    "invalid fuzzy algorithm - {:?}",
-                    fuzzy_algo
-                )));
-            }
-        }
-
         self.do_request(
             reqwest::Method::POST,
             "/api/data/v1/search",

@@ -111,10 +111,7 @@ impl Client {
             reqwest::multipart::Part::stream(file_body).file_name(file_name.to_string()),
         );
 
-        let response = self
-            .http_client
-            .request(method, &url)
-            .multipart(form);
+        let response = self.http_client.request(method, &url).multipart(form);
         let response = if let Some(token) = &self.auth_token {
             response.bearer_auth(token).send().await?
         } else {

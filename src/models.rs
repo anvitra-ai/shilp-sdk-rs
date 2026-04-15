@@ -679,12 +679,6 @@ pub enum FuzzyAlgo {
     JaroWinkler,
 }
 
-impl FuzzyAlgo {
-    pub fn is_valid(&self) -> bool {
-        matches!(self, FuzzyAlgo::Levenshtein | FuzzyAlgo::JaroWinkler)
-    }
-}
-
 // Search response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResponse {

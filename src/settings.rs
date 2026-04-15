@@ -7,12 +7,20 @@ use crate::models::{
 impl Client {
     /// Retrieves the server settings
     pub async fn get_settings(&self) -> Result<GetSettingsResponse> {
-        self.do_request::<GetSettingsResponse, ()>(reqwest::Method::GET, "/api/settings/v1/", None, None)
-            .await
+        self.do_request::<GetSettingsResponse, ()>(
+            reqwest::Method::GET,
+            "/api/settings/v1/",
+            None,
+            None,
+        )
+        .await
     }
 
     /// Updates server settings
-    pub async fn update_settings(&self, settings: &SettingsUpdateRequest) -> Result<GenericResponse> {
+    pub async fn update_settings(
+        &self,
+        settings: &SettingsUpdateRequest,
+    ) -> Result<GenericResponse> {
         self.do_request(
             reqwest::Method::PUT,
             "/api/settings/v1/",
