@@ -9,6 +9,7 @@ use std::time::Duration;
 pub struct Client {
     base_url: String,
     http_client: HttpClient,
+    auth_token: Option<String>,
 }
 
 impl Client {
@@ -22,6 +23,7 @@ impl Client {
         Self {
             base_url: base_url.into().trim_end_matches('/').to_string(),
             http_client,
+            auth_token: None,
         }
     }
 
@@ -30,7 +32,15 @@ impl Client {
         Self {
             base_url: base_url.into().trim_end_matches('/').to_string(),
             http_client,
+            auth_token: None,
         }
+    }
+
+    /// Creates a new Shilp API client with authentication token
+    pub fn with_auth(base_url: impl Into<String>, auth_token: impl Into<String>) -> Self {
+        let mut client = Self::new(base_url);
+        client.auth_token = Some(auth_token.into());
+        client
     }
 
     /// Performs an HTTP request and returns the deserialized response
@@ -54,6 +64,10 @@ impl Client {
 
         if let Some(body) = body {
             request = request.json(body);
+        }
+
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
         }
 
         let response = request.send().await?;
@@ -100,9 +114,12 @@ impl Client {
         let response = self
             .http_client
             .request(method, &url)
-            .multipart(form)
-            .send()
-            .await?;
+            .multipart(form);
+        let response = if let Some(token) = &self.auth_token {
+            response.bearer_auth(token).send().await?
+        } else {
+            response.send().await?
+        };
 
         if response.status().is_client_error() || response.status().is_server_error() {
             let status = response.status().as_u16();
@@ -125,6 +142,10 @@ impl Client {
 
         if let Some(params) = query_params {
             request = request.query(params);
+        }
+
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
         }
 
         let response = request.send().await?;

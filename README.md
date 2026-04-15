@@ -10,7 +10,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-shilp-sdk = "0.12"
+shilp-sdk = "0.14"
 tokio = { version = "1", features = ["full"] }
 ```
 
