@@ -1,8 +1,9 @@
 use crate::client::Client;
 use crate::error::Result;
 use crate::models::{
-    AddCollectionRequest, GenericResponse, GetCollectionDataResponse, GetCollectionSchemaResponse,
-    InsertRecordRequest, InsertRecordResponse, ListCollectionsResponse,
+    AddCollectionRequest, EnableMetadataStoreRequest, EnableMetadataStoreResponse, GenericResponse,
+    GetCollectionDataResponse, GetCollectionSchemaResponse, InsertRecordRequest,
+    InsertRecordResponse, ListCollectionsResponse,
 };
 use reqwest::Response;
 use std::collections::HashMap;
@@ -161,6 +162,17 @@ impl Client {
     ) -> Result<GetCollectionSchemaResponse> {
         let path = format!("/api/collections/v1/{}/schema", collection_name);
         self.do_request::<GetCollectionSchemaResponse, ()>(reqwest::Method::GET, &path, None, None)
+            .await
+    }
+
+    /// Enables metadata store for an existing collection
+    pub async fn enable_metadata_store(
+        &self,
+        collection_name: &str,
+        req: &EnableMetadataStoreRequest,
+    ) -> Result<EnableMetadataStoreResponse> {
+        let path = format!("/api/collections/v1/{}/metadata/enable", collection_name);
+        self.do_request(reqwest::Method::POST, &path, Some(req), None)
             .await
     }
 }

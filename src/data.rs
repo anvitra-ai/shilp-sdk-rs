@@ -32,7 +32,6 @@ impl Client {
                 "both vector_query and query cannot be empty".to_string(),
             ));
         }
-
         self.do_request(
             reqwest::Method::POST,
             "/api/data/v1/search",

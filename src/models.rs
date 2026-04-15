@@ -194,6 +194,22 @@ pub struct Collection {
     pub is_nli_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nli_domain: Option<String>,
+    #[serde(default)]
+    pub total_no_of_documents: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EnableMetadataStoreRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fields: Option<Vec<MetadataColumnSchema>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnableMetadataStoreResponse {
+    pub success: bool,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub records_indexed: Option<i32>,
 }
 
 // Metadata support info
@@ -369,11 +385,16 @@ pub enum IngestSourceType {
     File,
     #[serde(rename = "mongodb")]
     MongoDB,
+    #[serde(rename = "anvitra")]
+    Anvitra,
 }
 
 impl IngestSourceType {
     pub fn is_valid(&self) -> bool {
-        matches!(self, IngestSourceType::File | IngestSourceType::MongoDB)
+        matches!(
+            self,
+            IngestSourceType::File | IngestSourceType::MongoDB | IngestSourceType::Anvitra
+        )
     }
 }
 
@@ -646,6 +667,16 @@ pub struct SearchRequest {
     pub queries: Option<HashMap<String, String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vector_queries: Option<HashMap<String, Vec<f32>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fuzzy_algo: Option<FuzzyAlgo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum FuzzyAlgo {
+    #[serde(rename = "levenshtein")]
+    Levenshtein,
+    #[serde(rename = "jaro_winkler")]
+    JaroWinkler,
 }
 
 // Search response
@@ -656,6 +687,21 @@ pub struct SearchResponse {
     pub data: Vec<HashMap<String, serde_json::Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub interpretation: Option<Query>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timing: Option<SearchTiming>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchTiming {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interpretation_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub embedding_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata_filter_ms: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search_ms: Option<i64>,
+    pub total_ms: i64,
 }
 
 // Query interpretation from NLI
@@ -977,6 +1023,116 @@ pub struct OplogStatusResponse {
     pub last_lsn: u64,
     pub retention_lsn: u64,
     pub replica_count: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetSettingsResponse {
+    pub success: bool,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Settings>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Settings {
+    pub auth: SettingsAuth,
+    #[serde(rename = "allowedOrigins", skip_serializing_if = "Option::is_none")]
+    pub allowed_origins: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub integrations: Option<Vec<SettingsIntegration>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SettingsAuth {
+    pub enable: bool,
+    pub tested: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Vec<ProviderArgumentValue>>,
+    #[serde(rename = "apiAuthConfig", skip_serializing_if = "Option::is_none")]
+    pub api_auth_config: Option<APIAuthConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct APIAuthConfig {
+    pub search: bool,
+    pub collections: bool,
+    pub data: bool,
+    pub explore: bool,
+    pub oplog: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProviderArgumentValue {
+    pub key: String,
+    pub value: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_secret: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SettingsIntegration {
+    pub enable: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Vec<ProviderArgumentValue>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SettingsUpdateRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<SettingsAuth>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tested: Option<bool>,
+    #[serde(rename = "authConfig", skip_serializing_if = "Option::is_none")]
+    pub auth_config: Option<SettingsAuth>,
+    #[serde(rename = "allowedOrigins", skip_serializing_if = "Option::is_none")]
+    pub allowed_origins: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub integration: Option<HashMap<String, SettingsIntegration>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SettingsAvailableProvidersResponse {
+    pub success: bool,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<SettingsAvailableProvidersData>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SettingsAvailableProvidersData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<Vec<SettingsProviderInfo>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub integrations: Option<Vec<SettingsProviderInfo>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SettingsProviderArguments {
+    pub label: String,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_secret: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SettingsProviderType {
+    #[serde(rename = "auth")]
+    Auth,
+    #[serde(rename = "data-source")]
+    DataSource,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SettingsProviderInfo {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub provider_type: SettingsProviderType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Vec<SettingsProviderArguments>>,
 }
 
 // Update replica LSN request

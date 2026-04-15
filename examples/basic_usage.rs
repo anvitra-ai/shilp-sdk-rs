@@ -74,6 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         field_config: None,
         queries: None,
         vector_queries: None,
+        fuzzy_algo: None,
     };
     let results = client.search_data(&search_req).await?;
     println!("Search results: {:?}", results.data);
@@ -94,6 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         field_config: None,
         queries: None,
         vector_queries: None,
+        fuzzy_algo: None,
     };
     let advanced_results = client.search_data(&advanced_search_req).await?;
     println!("Advanced search results: {:?}", advanced_results.data);
