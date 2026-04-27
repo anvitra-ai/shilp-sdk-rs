@@ -7,9 +7,9 @@ use std::time::Duration;
 
 /// The main client for interacting with the Shilp API
 pub struct Client {
-    base_url: String,
-    http_client: HttpClient,
-    auth_token: Option<String>,
+    pub(crate) base_url: String,
+    pub(crate) http_client: HttpClient,
+    pub(crate) auth_token: Option<String>,
 }
 
 impl Client {
