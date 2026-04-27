@@ -1280,8 +1280,9 @@ pub struct UpdateModelsEvent {
     pub status: String,
     /// Human-readable message
     pub message: String,
-    /// Model field being updated
-    pub field: String,
+    /// Model field being updated -> ignore if not present
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field: Option<String>,
     /// Total models to update
     pub total: i32,
     /// Current model number

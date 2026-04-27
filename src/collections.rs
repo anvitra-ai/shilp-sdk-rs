@@ -229,7 +229,7 @@ impl Client {
             return Err(crate::error::ShilpError::ApiError { message, status });
         }
 
-        // Use a codec to split the stream by newlines and parse each line as JSON
+        // Use a codec to split the stream by newlines and parse SSE format
         use tokio_util::codec::{FramedRead, LinesCodec};
 
         let stream_reader =
@@ -237,19 +237,30 @@ impl Client {
                 result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
             }));
 
-        let stream = FramedRead::new(stream_reader, LinesCodec::new()).map(|result| {
-            result
-                .map_err(|e| {
-                    crate::error::ShilpError::IoError(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        e,
-                    ))
-                })
-                .and_then(|line| {
-                    serde_json::from_str::<UpdateModelsEvent>(&line)
-                        .map_err(|e| crate::error::ShilpError::from(e))
-                })
-        });
+        let stream =
+            FramedRead::new(stream_reader, LinesCodec::new()).filter_map(|result| async move {
+                match result {
+                    Ok(line) => {
+                        // SSE format: look for lines starting with "data: "
+                        if let Some(data) = line.strip_prefix("data: ") {
+                            Some(
+                                serde_json::from_str::<UpdateModelsEvent>(data)
+                                    .map_err(|e| crate::error::ShilpError::from(e)),
+                            )
+                        } else {
+                            // Skip "event:" lines and other SSE metadata
+                            None
+                        }
+                    }
+                    Err(e) => {
+                        // Propagate IO errors
+                        Some(Err(crate::error::ShilpError::IoError(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            e,
+                        ))))
+                    }
+                }
+            });
 
         Ok(stream)
     }
