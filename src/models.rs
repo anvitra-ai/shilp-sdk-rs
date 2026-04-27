@@ -461,7 +461,20 @@ pub struct VerticalInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub models: Option<Vec<NLIModelInfo>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub is_native: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+}
+
+// NLI model info
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NLIModelInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
 }
 
 // List NLI verticals response
@@ -1250,4 +1263,93 @@ impl ReplicaType {
     pub fn is_single_node(&self) -> bool {
         matches!(self, ReplicaType::SingleNode)
     }
+}
+
+// List collections models response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListCollectionsModelsResponse {
+    pub success: bool,
+    pub data: Vec<CollectionModel>,
+    pub message: String,
+}
+
+// Update models event for streaming updates
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateModelsEvent {
+    /// Status of the update: "updating", "success", "error", "complete"
+    pub status: String,
+    /// Human-readable message
+    pub message: String,
+    /// Model field being updated
+    pub field: String,
+    /// Total models to update
+    pub total: i32,
+    /// Current model number
+    pub current: i32,
+    /// Error message if status is "error"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+// Get collection model response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetCollectionModelResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Model>,
+    pub message: String,
+}
+
+// Collection model
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CollectionModel {
+    pub collection: String,
+    pub models: Vec<Model>,
+    pub upgrade_available: bool,
+}
+
+// Model struct
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Model {
+    pub id: String,
+    pub project_id: String,
+    pub name: String,
+    pub description: String,
+    pub collection: String,
+    pub version: String,
+    pub model_type: ModelType,
+    pub status: String,
+    pub supported_version: String,
+    pub labels: Vec<String>,
+    pub embedding_dim: i32,
+    pub mode: String,
+    pub label_field: String,
+    pub num_samples: i32,
+    pub skipped: i32,
+    pub label_grouping: HashMap<String, Vec<String>>,
+    pub classifier_selection_strategy: HashMap<String, serde_json::Value>,
+    pub file_path: String,
+    pub file_size: i64,
+    pub enabled: bool,
+    pub created_at: serde_json::Value,
+    pub updated_at: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<serde_json::Value>,
+}
+
+// Model type enum
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ModelType {
+    Collection,
+    Vertical,
+}
+
+// Get model response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GetModelResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<Model>,
+    pub message: String,
 }

@@ -2,9 +2,11 @@ use crate::client::Client;
 use crate::error::Result;
 use crate::models::{
     AddCollectionRequest, EnableMetadataStoreRequest, EnableMetadataStoreResponse, GenericResponse,
-    GetCollectionDataResponse, GetCollectionSchemaResponse, InsertRecordRequest,
-    InsertRecordResponse, ListCollectionsResponse,
+    GetCollectionDataResponse, GetCollectionModelResponse, GetCollectionSchemaResponse,
+    InsertRecordRequest, InsertRecordResponse, ListCollectionsModelsResponse,
+    ListCollectionsResponse, UpdateModelsEvent,
 };
+use futures_util::StreamExt;
 use reqwest::Response;
 use std::collections::HashMap;
 
@@ -174,5 +176,68 @@ impl Client {
         let path = format!("/api/collections/v1/{}/metadata/enable", collection_name);
         self.do_request(reqwest::Method::POST, &path, Some(req), None)
             .await
+    }
+
+    /// Lists all collection models
+    pub async fn list_collection_models(&self) -> Result<ListCollectionsModelsResponse> {
+        self.do_request::<ListCollectionsModelsResponse, ()>(
+            reqwest::Method::GET,
+            "/api/collections/v1/models",
+            None,
+            None,
+        )
+        .await
+    }
+
+    /// Gets information about a specific collection model
+    pub async fn get_collection_model_info(
+        &self,
+        collection_name: &str,
+        model_id: &str,
+    ) -> Result<GetCollectionModelResponse> {
+        let path = format!(
+            "/api/collections/v1/{}/models/{}",
+            collection_name, model_id
+        );
+        self.do_request::<GetCollectionModelResponse, ()>(reqwest::Method::GET, &path, None, None)
+            .await
+    }
+
+    /// Updates collection models with streaming progress updates.
+    /// Returns a stream of UpdateModelsEvent.
+    /// The stream sends events line by line until completion or error.
+    pub async fn update_collection_model(
+        &self,
+        collection_name: &str,
+    ) -> Result<impl futures_util::Stream<Item = Result<UpdateModelsEvent>>> {
+        let url = format!(
+            "{}/api/collections/v1/{}/models/update",
+            self.base_url, collection_name
+        );
+        let mut request = self.http_client.request(reqwest::Method::GET, &url);
+
+        if let Some(token) = &self.auth_token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+
+        if response.status().is_client_error() || response.status().is_server_error() {
+            let status = response.status().as_u16();
+            let message = response.text().await.unwrap_or_default();
+            return Err(crate::error::ShilpError::ApiError { message, status });
+        }
+
+        let stream = response.bytes_stream().map(|result| {
+            result
+                .map_err(|e| crate::error::ShilpError::from(e))
+                .and_then(|bytes| {
+                    let text = String::from_utf8_lossy(&bytes);
+                    serde_json::from_str::<UpdateModelsEvent>(&text)
+                        .map_err(|e| crate::error::ShilpError::from(e))
+                })
+        });
+
+        Ok(stream)
     }
 }
