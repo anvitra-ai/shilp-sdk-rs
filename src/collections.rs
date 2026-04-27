@@ -206,6 +206,7 @@ impl Client {
     /// Updates collection models with streaming progress updates.
     /// Returns a stream of UpdateModelsEvent.
     /// The stream sends events line by line until completion or error.
+    /// Each event is a newline-delimited JSON object.
     pub async fn update_collection_model(
         &self,
         collection_name: &str,
@@ -228,12 +229,24 @@ impl Client {
             return Err(crate::error::ShilpError::ApiError { message, status });
         }
 
-        let stream = response.bytes_stream().map(|result| {
+        // Use a codec to split the stream by newlines and parse each line as JSON
+        use tokio_util::codec::{FramedRead, LinesCodec};
+
+        let stream_reader =
+            tokio_util::io::StreamReader::new(response.bytes_stream().map(|result| {
+                result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+            }));
+
+        let stream = FramedRead::new(stream_reader, LinesCodec::new()).map(|result| {
             result
-                .map_err(|e| crate::error::ShilpError::from(e))
-                .and_then(|bytes| {
-                    let text = String::from_utf8_lossy(&bytes);
-                    serde_json::from_str::<UpdateModelsEvent>(&text)
+                .map_err(|e| {
+                    crate::error::ShilpError::IoError(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        e,
+                    ))
+                })
+                .and_then(|line| {
+                    serde_json::from_str::<UpdateModelsEvent>(&line)
                         .map_err(|e| crate::error::ShilpError::from(e))
                 })
         });
