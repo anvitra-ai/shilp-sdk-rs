@@ -215,7 +215,7 @@ impl Client {
             "{}/api/collections/v1/{}/models/update",
             self.base_url, collection_name
         );
-        let mut request = self.http_client.request(reqwest::Method::GET, &url);
+        let mut request = self.http_client.request(reqwest::Method::POST, &url);
 
         if let Some(token) = &self.auth_token {
             request = request.bearer_auth(token);
